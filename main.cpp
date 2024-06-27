@@ -15,14 +15,15 @@ struct Player
 	float radius;
 	Vector2 velocity;
 	Vector2 dragStart;
-	bool isDragging;
-
+	bool isDragging; 
 };
 
 struct Enemy
 {
 	Vector2 position;
 	float radius;
+	unsigned int color;
+	int hitTimer;     
 };
 
 // Windowsアプリでのエントリーポイント(main関数)
@@ -40,7 +41,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	Player ReflectionPosition{ {200,650},25,{0,0} ,{0,0},false };
 
-	Enemy EnemyPosition{ { 240,360 },40 };
+	Enemy EnemyPosition{ { 240,360 },40 ,WHITE, 0 };
 
 	int mouseX = 0;
 	int mouseY = 0;
@@ -188,15 +189,37 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		float distReflectionEnemy = sqrtf((ReflectionPosition.position.x - EnemyPosition.position.x) * (ReflectionPosition.position.x - EnemyPosition.position.x) +
 			(ReflectionPosition.position.y - EnemyPosition.position.y) * (ReflectionPosition.position.y - EnemyPosition.position.y));
 
-		if (distPenetrationEnemy <= PenetrationPosition.radius + EnemyPosition.radius)
-		{
-			// 貫通が敵に衝突したら何もしない
+		//if (distPenetrationEnemy <= PenetrationPosition.radius + EnemyPosition.radius)
+		//{
+		//	// 貫通が敵に衝突したら何もしない
+		//}
+
+		//if (distReflectionEnemy <= ReflectionPosition.radius + EnemyPosition.radius)
+		//{
+		//	// 反射が敵に衝突したら反射する
+		//	Vector2 toEnemy = {EnemyPosition.position.x - ReflectionPosition.position.x, EnemyPosition.position.y - ReflectionPosition.position.y};
+		//	float len = sqrtf(toEnemy.x * toEnemy.x + toEnemy.y * toEnemy.y);
+		//	toEnemy.x /= len;
+		//	toEnemy.y /= len;
+
+		//	ReflectionPosition.velocity.x = -ReflectionPosition.velocity.x + 2 * (ReflectionPosition.velocity.x * toEnemy.x + ReflectionPosition.velocity.y * toEnemy.y) * toEnemy.x;
+		//	ReflectionPosition.velocity.y = -ReflectionPosition.velocity.y + 2 * (ReflectionPosition.velocity.x * toEnemy.x + ReflectionPosition.velocity.y * toEnemy.y) * toEnemy.y;
+
+		//	// 反射する方向を計算（反射角＝入射角となるように計算）
+		//	float dotProduct = ReflectionPosition.velocity.x * toEnemy.x + ReflectionPosition.velocity.y * toEnemy.y;
+		//	ReflectionPosition.velocity.x = ReflectionPosition.velocity.x - 2 * dotProduct * toEnemy.x;
+		//	ReflectionPosition.velocity.y = ReflectionPosition.velocity.y - 2 * dotProduct * toEnemy.y;
+		//}
+		
+		if (distPenetrationEnemy <= PenetrationPosition.radius + EnemyPosition.radius) {
+			// 貫通が敵に衝突したら色を赤にしタイマーをセット
+			EnemyPosition.color = RED;
+			EnemyPosition.hitTimer = 10;
 		}
 
-		if (distReflectionEnemy <= ReflectionPosition.radius + EnemyPosition.radius)
-		{
+		if (distReflectionEnemy <= ReflectionPosition.radius + EnemyPosition.radius) {
 			// 反射が敵に衝突したら反射する
-			Vector2 toEnemy = {EnemyPosition.position.x - ReflectionPosition.position.x, EnemyPosition.position.y - ReflectionPosition.position.y};
+			Vector2 toEnemy = { EnemyPosition.position.x - ReflectionPosition.position.x, EnemyPosition.position.y - ReflectionPosition.position.y };
 			float len = sqrtf(toEnemy.x * toEnemy.x + toEnemy.y * toEnemy.y);
 			toEnemy.x /= len;
 			toEnemy.y /= len;
@@ -208,7 +231,20 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			float dotProduct = ReflectionPosition.velocity.x * toEnemy.x + ReflectionPosition.velocity.y * toEnemy.y;
 			ReflectionPosition.velocity.x = ReflectionPosition.velocity.x - 2 * dotProduct * toEnemy.x;
 			ReflectionPosition.velocity.y = ReflectionPosition.velocity.y - 2 * dotProduct * toEnemy.y;
+
+			// 反射が敵に衝突したら色を赤にしタイマーをセット
+			EnemyPosition.color = RED;
+			EnemyPosition.hitTimer = 10;
 		}
+
+		// ヒットタイマーをデクリメント
+		if (EnemyPosition.hitTimer > 0) {
+			EnemyPosition.hitTimer--;
+			if (EnemyPosition.hitTimer == 0) {
+				EnemyPosition.color = WHITE; // 元の色に戻す
+			}
+		}
+		
 		///
 		/// ↑更新処理ここまで
 		///
@@ -220,27 +256,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		Novice::DrawEllipse((int)ReflectionPosition.position.x, (int)ReflectionPosition.position.y, (int)PenetrationPosition.radius, (int)ReflectionPosition.radius, 0.0f, RED, kFillModeSolid); // 反射
 
-		// 衝突した敵の色を赤に変更
-		if (distReflectionEnemy <= ReflectionPosition.radius + EnemyPosition.radius)
-		{
-			Novice::DrawEllipse((int)EnemyPosition.position.x, (int)EnemyPosition.position.y, (int)EnemyPosition.radius, (int)EnemyPosition.radius, 0.0f, RED, kFillModeSolid);
-		}
-		else
-		{
-			// 衝突していない敵は通常の白色で描画
-			Novice::DrawEllipse((int)EnemyPosition.position.x, (int)EnemyPosition.position.y, (int)EnemyPosition.radius, (int)EnemyPosition.radius, 0.0f, WHITE, kFillModeSolid);
-		}
+		// 敵の描画
+		Novice::DrawEllipse((int)EnemyPosition.position.x, (int)EnemyPosition.position.y, (int)EnemyPosition.radius, (int)EnemyPosition.radius, 0.0f, EnemyPosition.color, kFillModeSolid);
 
-		// 衝突した敵の色を赤に変更
-		if (distPenetrationEnemy <= PenetrationPosition.radius + EnemyPosition.radius)
-		{
-			Novice::DrawEllipse((int)EnemyPosition.position.x, (int)EnemyPosition.position.y, (int)EnemyPosition.radius, (int)EnemyPosition.radius, 0.0f, RED, kFillModeSolid);
-		}
-		else
-		{
-			// 衝突していない敵は通常の白色で描画
-			Novice::DrawEllipse((int)EnemyPosition.position.x, (int)EnemyPosition.position.y, (int)EnemyPosition.radius, (int)EnemyPosition.radius, 0.0f, WHITE, kFillModeSolid);
-		}
+		///
 		///
 		/// ↑描画処理ここまで
 		///		  
